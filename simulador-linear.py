@@ -19,6 +19,33 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
+
+def plot_results(counts, t1_rates, t2_rates, team1, team2, map_played, outfile="mc_winrate.png"):
+    plt.figure(figsize=(8, 5))
+    plt.plot(counts, t1_rates, marker="o", label=f"{team1} win‑rate")
+    plt.plot(counts, t2_rates, marker="s", label=f"{team2} win‑rate")
+    
+    for x, y in zip(counts, t1_rates):
+        plt.text(x, y + 0.02, f"{y * 100:.2f}%", ha="center", va="bottom", fontsize=8)
+    for x, y in zip(counts, t2_rates):
+        plt.text(x, y + 0.02, f"{y * 100:.2f}%", ha="center", va="bottom", fontsize=8)
+    
+    plt.xlabel("Número de simulações")
+    plt.ylabel("Taxa de vitória")
+    plt.xscale("log")
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+    formatter.set_useOffset(False)
+    plt.gca().xaxis.set_major_formatter(formatter)
+    plt.ylim(0, 1.05)
+    plt.grid(True, which="both", linestyle=":", linewidth=0.6)
+    plt.title(f"{team1} X {team2} - {map_played}")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(outfile, dpi=150)
+    print(f"[INFO] plot saved to {outfile}", file=sys.stderr)
 
 # ───── configuration ──────────────────────────────────────────────
 CSV_PATH   = Path("cs2_matches.csv")   # change if needed
@@ -190,7 +217,16 @@ rng = np.random.default_rng(RNG_SEED)
 wins = rng.random(N_DRAWS) < p
 
 print(f"Model win-probability for {team_a}: {p:.2%}")
+
+counts = np.logspace(2, np.log10(N_DRAWS), num=10, dtype=int)  # e.g. from 100 to 1,000,000
+t1_rates = [wins[:n].mean() for n in counts]
+t2_rates = [1 - r for r in t1_rates]
+
+# Print MC result summary
 print(f"Monte-Carlo tally over {N_DRAWS:,d} replays:")
 print(f"  {team_a:>20} wins: {wins.sum():5d}  ({wins.mean():.2%})")
 print(f"  {team_b:>20} wins: {N_DRAWS - wins.sum():5d}  ({1 - wins.mean():.2%})")
 print(f"  ± sampling SE  : {wins.std(ddof=1):.2%}")
+
+# Generate plot
+plot_results(counts, t1_rates, t2_rates, team_a, team_b, map_name)
