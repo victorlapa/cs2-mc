@@ -16,6 +16,7 @@ import argparse
 import sys
 import warnings
 from pathlib import Path
+import lightgbm as lgb
 
 from matplotlib.ticker import ScalarFormatter
 
